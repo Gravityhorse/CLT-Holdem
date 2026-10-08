@@ -120,6 +120,10 @@ button.ghost { border-color: var(--dim); color: var(--muted); }
 .raise input[type=range] { flex: 1 1 140px; accent-color: var(--phos); min-width: 0; }
 .raise button { flex: 0 0 auto; padding: 8px 9px; font-size: .5rem; }
 .wait { color: var(--muted); font-size: .85rem; }
+button.pre { border-color: var(--dim); color: var(--muted); }
+button.pre:hover:not(:disabled) { color: var(--phos); border-color: var(--phos); background: transparent; }
+button.pre.on { border-color: var(--gold); color: var(--court); background: var(--gold); }
+button.pre.on:hover:not(:disabled) { background: color-mix(in srgb, var(--gold) 85%, white); color: var(--court); }
 .log { width: 100%; max-width: 860px; color: var(--muted); font-size: .78rem; display: flex; flex-direction: column; gap: 2px; min-height: 6em; }
 .log div:first-child { color: var(--phos); }
 .hint { color: var(--muted); font-size: .75rem; text-align: center; }
@@ -295,9 +299,13 @@ kbd { border: 1px solid var(--dim); border-radius: 3px; padding: 0 5px; color: v
 .hintbox .hb-adv { color: var(--tone, var(--phos)); font-weight: 600; }
 .hintbox .hb-wait { font-style: italic; }
 /* ---------- settings corner ---------- */
-.gear { flex: 0 0 auto; font-size: .5rem; padding: 7px 10px; border-color: var(--claude); color: var(--claude); display: inline-flex; gap: 6px; align-items: center; }
-.gear svg { width: 12px; height: 12px; fill: currentColor; }
+.gear { flex: 0 0 auto; width: 34px; height: 30px; padding: 0; border-color: var(--claude); color: var(--claude); display: inline-flex; align-items: center; justify-content: center; transition: color .3s, border-color .3s, background .3s; }
+.gear svg { width: 15px; height: 15px; fill: currentColor; transition: transform .4s cubic-bezier(.22,1,.36,1); }
+.gear:hover:not(:disabled) svg { transform: rotate(45deg); }
 .gear[aria-expanded="true"] { background: var(--claude); color: var(--court); }
+.ingame .gear { border-color: var(--dim); color: var(--phos); }
+.ingame .gear:hover:not(:disabled) { background: color-mix(in srgb, var(--phos) 12%, transparent); }
+.ingame .gear[aria-expanded="true"] { background: var(--phos); color: var(--court); border-color: var(--phos); }
 .settings {
   position: fixed; z-index: 70; top: calc(52px + env(safe-area-inset-top, 0px)); right: max(16px, calc((100vw - 860px) / 2));
   width: min(320px, calc(100vw - 32px)); background: var(--court); border: 2px solid var(--dim); border-radius: 10px;
@@ -2651,7 +2659,7 @@ var qrcode = function() {
 </script>
 </head>
 <body>
-<div class="hdr"><h1>MEETING HOLD'EM</h1><div class="hdr-r"><span id="info">NO-LIMIT · PLAY CHIPS</span><button type="button" class="gear" id="gearBtn" aria-expanded="false" aria-controls="settings"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 0h2l.4 2.1 1.4.6 1.8-1.2 1.4 1.4-1.2 1.8.6 1.4L16 7v2l-2.1.4-.6 1.4 1.2 1.8-1.4 1.4-1.8-1.2-1.4.6L9 16H7l-.4-2.1-1.4-.6-1.8 1.2-1.4-1.4 1.2-1.8-.6-1.4L0 9V7l2.1-.4.6-1.4-1.2-1.8 1.4-1.4 1.8 1.2 1.4-.6zM8 5.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z"/></svg>SETTINGS</button></div></div>
+<div class="hdr"><h1>MEETING HOLD'EM</h1><div class="hdr-r"><span id="info">NO-LIMIT · PLAY CHIPS</span><button type="button" class="gear" id="gearBtn" aria-expanded="false" aria-controls="settings" aria-label="Settings" title="Settings"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 0h2l.4 2.1 1.4.6 1.8-1.2 1.4 1.4-1.2 1.8.6 1.4L16 7v2l-2.1.4-.6 1.4 1.2 1.8-1.4 1.4-1.8-1.2-1.4.6L9 16H7l-.4-2.1-1.4-.6-1.8 1.2-1.4-1.4 1.2-1.8-.6-1.4L0 9V7l2.1-.4.6-1.4-1.2-1.8 1.4-1.4 1.8 1.2 1.4-.6zM8 5.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z"/></svg></button></div></div>
 <div class="settings" id="settings" role="dialog" aria-label="Settings" hidden>
   <h3>SETTINGS</h3>
   <div class="set-row"><div class="txt"><b>HOW TO PLAY</b><span>A 1-minute visual tour of the rules.</span></div><button type="button" class="helpbtn" data-tut="1" id="helpBtn">OPEN</button></div>
@@ -2758,7 +2766,7 @@ var qrcode = function() {
 </div>
 <div class="log" id="log" aria-live="polite"></div>
 <div class="fly" id="fly" aria-hidden="true"></div>
-<div class="hint"><kbd>F</kbd> fold · <kbd>C</kbd> check/call · <kbd>R</kbd> raise · <kbd>A</kbd> all-in · <kbd>Enter</kbd> deal (when it's your deck)</div>
+<div class="hint"><kbd>F</kbd> fold (check/fold while you wait) · <kbd>C</kbd> check/call · <kbd>R</kbd> raise · <kbd>A</kbd> all-in · <kbd>Enter</kbd> deal (when it's your deck)</div>
 
 <script>
 /* ---------- network: a tiny "room" over a free public MQTT relay ----------
@@ -3226,8 +3234,16 @@ function actionsHTML(v, me) {
   const p = v.ps[me];
   if (v.ta !== me || gPending) {
     const who = v.ta >= 0 && v.ps[v.ta] ? v.ps[v.ta].n : '';
-    return `<div class="wait">${p.f ? 'You folded. Watching the hand play out…' : p.o ? 'You are out of chips.' : gPending ? 'Sent…' : `Waiting for ${esc(who)}…`}</div>
-      <div class="btns"><button disabled>FOLD</button><button disabled>CHECK</button><button disabled>RAISE</button></div>`;
+    const canPre = !p.f && !p.o && !p.a && !gPending;
+    const on = canPre && preOn(v);
+    const free = p.bt >= v.cb;
+    const msg = p.f ? 'You folded. Watching the hand play out…' : p.o ? 'You are out of chips.' : p.a ? 'You are all-in. Sit back and watch.' : gPending ? 'Sent…'
+      : on ? (free ? `Check/Fold is on: you'll check if nobody bets, and fold if someone does.` : `Check/Fold is on: there's a bet to you, so you'll fold when it's your turn.`)
+      : `Waiting for ${esc(who)}…`;
+    return `<div class="wait">${msg}</div>
+      <div class="btns">${canPre
+        ? `<button type="button" class="pre ${on ? 'on' : ''}" data-act="precf" id="bPre" aria-pressed="${on}">${on ? '✓ CHECK/FOLD' : 'CHECK/FOLD'}</button>`
+        : '<button disabled>FOLD</button><button disabled>CHECK</button><button disabled>RAISE</button>'}</div>`;
   }
   const { toCall, maxTo, minTo, canRaise } = legal(v, me);
   const verb = v.cb === 0 ? 'BET' : 'RAISE TO';
@@ -3246,6 +3262,7 @@ function actionsHTML(v, me) {
 let lastView = null, lastSeat = -1;
 function draw(v, mySeat, myHand) {
   lastView = v; lastSeat = mySeat;
+  if (document.body) document.body.classList.toggle('ingame', !!(v && Array.isArray(v.ps)));
   if (!v || !Array.isArray(v.ps)) {
     $('opps').innerHTML = ''; $('meSeat').innerHTML = ''; $('actions').innerHTML = '';
     $('board').innerHTML = [0,1,2,3,4].map(() => cardHTML(null)).join('');
@@ -3255,7 +3272,7 @@ function draw(v, mySeat, myHand) {
     return;
   }
   const k = `${v.h}-${v.sq}-${v.ta}`;
-  if (v.ta === mySeat && mySeat >= 0 && k !== turnKey) { turnKey = k; const L = legal(v, mySeat); raiseTo = Math.max(L.minTo, Math.min(L.maxTo, Math.max(v.cb + v.mr, v.b[1]))); }
+  if (v.ta === mySeat && mySeat >= 0 && k !== turnKey) { turnKey = k; const L = legal(v, mySeat); raiseTo = Math.max(L.minTo, Math.min(L.maxTo, Math.max(v.cb + v.mr, v.b[1]))); firePre(v, mySeat, k); }
   const tbl = document.querySelector('.table');
   if (tbl) { const no = v.ps.length - (mySeat >= 0 ? 1 : 0); tbl.classList.toggle('crowd', v.ps.length > 4); tbl.style.setProperty('--cols', no <= 4 ? no : Math.ceil(no / 2)); }
   const others = v.ps.map((_, i) => i).filter(i => i !== mySeat);
@@ -3310,8 +3327,8 @@ function placePuck(v) {
   const wasHidden = puck.hidden;
   puck.hidden = false;
   const tr = puck.parentElement.getBoundingClientRect(), sr = seat.getBoundingClientRect();
-  const x = Math.round(sr.right - tr.left - puck.offsetWidth - 14);
-  const y = Math.round(sr.top - tr.top - puck.offsetHeight / 2);
+  const x = Math.round(sr.left - tr.left + (sr.width - puck.offsetWidth) / 2);
+  const y = Math.round(sr.top - tr.top - puck.offsetHeight * 0.72);
   if (wasHidden) { puck.classList.add('snap'); puck.style.transform = `translate(${x}px, ${y}px)`; puck.offsetWidth; puck.classList.remove('snap'); }
   else puck.style.transform = `translate(${x}px, ${y}px)`;
 }
@@ -3485,6 +3502,7 @@ const TUT = [
         <div class="opt"><span class="fake">CALL 20</span><span>Match the current bet to stay in the hand.</span></div>
         <div class="opt"><span class="fake">RAISE</span><span>Bet more. Everyone else must match it or fold.</span></div>
         <div class="opt"><span class="fake">ALL-IN</span><span>Bet every chip you have.</span></div>
+        <div class="opt"><span class="fake" style="border-color:var(--gold);background:var(--gold);color:var(--court)">✓ CHECK/FOLD</span><span>Tap it while you wait: you check when it's free and fold if someone bets.</span></div>
       </div>`,
   },
   {
@@ -3764,8 +3782,29 @@ function toggleSettings(force) {
 document.addEventListener('pointerdown', e => { if (!$('settings').hidden && !e.target.closest('#settings, #gearBtn')) toggleSettings(false); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('settings').hidden) { toggleSettings(false); $('gearBtn').focus(); } });
 $('hintSwitch').setAttribute('aria-checked', String(hintsOn));
+/* ---------- Check/Fold: pick it while you wait, it plays for you until the hand ends ---------- */
+let pre = { h: -1, on: false };
+const preOn = v => pre.on && pre.h === v.h;
+function togglePre() {
+  const v = lastView; if (!v || v.ph !== 'bet') return;
+  pre = preOn(v) ? { h: v.h, on: false } : { h: v.h, on: true };
+  redraw();
+  // switched on during your own turn (it can't be, the button only shows while waiting), so nothing else to do
+}
+function firePre(v, me, k) {
+  if (!preOn(v)) return;
+  const p = v.ps[me];
+  const free = p.bt >= v.cb;
+  setTimeout(() => {
+    // still the same decision, and still switched on?
+    if (!lastView || lastView.ta !== lastSeat || `${lastView.h}-${lastView.sq}-${lastView.ta}` !== k || !preOn(lastView)) return;
+    if (!free) pre.on = false; // folding ends it
+    act(free ? 'call' : 'fold');
+  }, 350);
+}
 /* ---------- input ---------- */
 function act(a, v) {
+  if (a === 'precf') return togglePre();
   if (a === 'size') return setRaise(v);
   if (a === 'leave') return leaveTable();
   if (role === 'guest') return guestAct(a);
@@ -3807,6 +3846,8 @@ document.addEventListener('keydown', e => {
   if ((k === 'enter' || k === ' ') && e.target.tagName === 'BUTTON') return;
   if (!$('setupSolo').hidden) { if (k === 'enter') { role = 'solo'; newGame(chosenN); } return; }
   if (k === 'enter' || k === ' ') { if (lastView && lastView.ph === 'between' && lastView.nd === lastSeat) { e.preventDefault(); act('deal'); } return; }
+  // F works both ways: fold on your turn, Check/Fold while you wait (X does the same while waiting)
+  if ((k === 'x' || k === 'f') && $('bPre')) return act('precf');
   if (k === 'f') act('fold'); else if (k === 'c') act('call'); else if (k === 'r') act('raise'); else if (k === 'a') act('allin');
 });
 let chosenN = 3;
